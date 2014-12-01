@@ -1,0 +1,1 @@
+("6.1.1" ("3c9865823c39f745a5f848e040946bd6decd7728" . "7d2374011404683a7c73bd3362dacf08f4a26013") (collects #"scribble" #"manual.rkt") #"C:\\src\\peg-1C\\lang\\lexer.scm" (collects #"racket" #"runtime-config.rkt") (collects #"scribble" #"base" #"lang.rkt") (collects #"scribble" #"core.rkt") (collects #"scribble" #"base" #"lang" #"reader.rkt"))
