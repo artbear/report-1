@@ -1,5 +1,3 @@
 /lang/*
 /compiled/*
-*.html
-*.css
-*.js
+*.bak
