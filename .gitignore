@@ -1,4 +1,5 @@
 /lang/*
+/compiled/*
 *.html
 *.css
 *.js
