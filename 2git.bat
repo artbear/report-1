@@ -1,3 +1,3 @@
 git add --all 
-git commit -m "Изменения от %DATE%"
+git commit -m "Changed %DATE% %TIME%"
 git push  origin master
