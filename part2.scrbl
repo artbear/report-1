@@ -296,33 +296,67 @@
 функции как объекты первого класса, замыкания и прочие вкусные плюшки, но пока потолок метапрограммирования - @1C{Выполнить()}/@1C{Вычислить()}. 
 	Меня, как разработчика,  это безмерно огорчает, но нет времени/денег/сил на разработку своего компилятора 1С. 
 	Так что буду ждать милости от разработчиков. Может наигравшись с "Такси" - обратят внимание на язык.}
-@para{В первом приближении грамматика файла для генератора парсеров представляет из себя последовательность, возможно пустую, правил разбора. Записывается это так}
+@para{Грамматику для нашего файла определения грамматики возмем  @link["https://github.com/orlandohill/waxeye/blob/master/grammars/waxeye.waxeye"]{отсюда} и модифицируем для наших целей.
+   Получиться примерно следующее:}
 
-@BNF[(list @nonterm{СписокПравил} @kleenestar[@nonterm{Правило}])]
-@para{Правило - это именованое определение. В приведеной выше грамматике разбора арифметичских выражений, примером правила может быть }
-@BNF[(list @nonterm{digits} @kleeneplus[@nonterm{@optional[@BNF-seq[@litchar{0-9}]]}])]
-@para{Здесь digits - имя правила, а выражение - все что идет поле значка "=". Таким образом появляется определение для нетерминала Правило }
-@BNF[(list @nonterm{Правило} @BNF-seq[@nonterm{Идентификатор} @litchar{=} @nonterm{Выражение}])]
+@1C{
+    
+Функция ПарсерГрамматика(СтрокаОпределенияГрамматики)
+	
+	СтруктураПарсера = Новый Структура;
+	
+	ДобавитьПравило(СтруктураПарсера,"Grammar",				_seq("Ws","Definition_start"));
+	ДобавитьПравило(СтруктураПарсера,"Definition_start",	_star("Definition"));
+	ДобавитьПравило(СтруктураПарсера,"Definition",			_seq("Identifier","Arrow","Alternation","Ws"));
+	ДобавитьПравило(СтруктураПарсера,"Alternation",			_seq("Sequence","AlternationPart_start"));
+	ДобавитьПравило(СтруктураПарсера,"AlternationPart_start",	_star("AlternationPart"));
+	ДобавитьПравило(СтруктураПарсера,"AlternationPart",	_seq("Alt","Sequence"));
+	ДобавитьПравило(СтруктураПарсера,"Sequence",		_plus("Unit"));
+	ДобавитьПравило(СтруктураПарсера,"Unit",			_seq("Prefix_startt","UnitPart"));
+	ДобавитьПравило(СтруктураПарсера,"Prefix_startt",	_star("Prefix"));
+	ДобавитьПравило(СтруктураПарсера,"UnitPart",		_choose("Id","OC_Alternation","Literal","CaseLiteral","CharClass","WildCard"));
+	ДобавитьПравило(СтруктураПарсера,"Id",				_seq("Identifier","NotArrow"));
+	ДобавитьПравило(СтруктураПарсера,"NotArrow",		_not("Arrow"));
+	ДобавитьПравило(СтруктураПарсера,"OC_Alternation",	_seq("Open","Alternation","Close"));
+	ДобавитьПравило(СтруктураПарсера,"Prefix",			_seq("PrefixPart","Ws"));
+	ДобавитьПравило(СтруктураПарсера,"PrefixPart",		_match_or_list("?*+&!"));
+	ДобавитьПравило(СтруктураПарсера,"Identifier",		_seq("IdFirst","IdRest_start","Ws"));
+	ДобавитьПравило(СтруктураПарсера,"IdFirst",			_choose(_range("а","я"),_range("А","Я"),_range("A","Z"),_range("a","z"),_match("_")));
+	ДобавитьПравило(СтруктураПарсера,"IdRest_start",	_star("IdRest"));
+	ДобавитьПравило(СтруктураПарсера,"IdRest",			_choose(_range("а","я"),_range("А","Я"),_range("A","Z"),_range("a","z"),_range("0","9"),_match("_")));
+	ДобавитьПравило(СтруктураПарсера,"Literal",		_seq(_match("'"),"Literal_start",_match("'"),"Ws"));
+	ДобавитьПравило(СтруктураПарсера,"Literal_start",		_star("LiteralPart"));
+	ДобавитьПравило(СтруктураПарсера,"LiteralPart",		_seq(_not(_match("'")),"LChar"));
+	ДобавитьПравило(СтруктураПарсера,"CaseLiteral",	_seq(_match(""""),_star(_seq(_not(_match("""")),_choose("LChar","Hex"))),_match(""""),"Ws"));
+	ДобавитьПравило(СтруктураПарсера,"LChar",		_choose("LCharCnst","LCharAny"));
+	ДобавитьПравило(СтруктураПарсера,"LCharCnst",		_seq(_match("\"),_match_or_list("nrt'""\")));
+	ДобавитьПравило(СтруктураПарсера,"LCharAny",		_seq(_not(_match("\")),_not("EndOfLine"),any()));
+	ДобавитьПравило(СтруктураПарсера,"CharClass",	_seq(_match("["), "Ranges" , _match("]"),"Ws"));
+	ДобавитьПравило(СтруктураПарсера,"Ranges",		_star("RangeElement"));
+	ДобавитьПравило(СтруктураПарсера,"RangeElement",_seq(_not(_match("]")),"Range"));
+	ДобавитьПравило(СтруктураПарсера,"Range",		_choose("Range0","Char"));
+	ДобавитьПравило(СтруктураПарсера,"Range0",		_seq("Char", _match("-"),"Char"));
+	ДобавитьПравило(СтруктураПарсера,"Char",		_choose("Char0","Char1"));
+	ДобавитьПравило(СтруктураПарсера,"Char0",		_seq(_match("\"),_match_or_list("nrt-]\")));
+	ДобавитьПравило(СтруктураПарсера,"Char1",		_seq(_not(_match("\")), _not(_match("]")),_not("EndOfLine"),any()));
+	ДобавитьПравило(СтруктураПарсера,"Arrow",		_seq(_match("<-"),"Ws"));
+	ДобавитьПравило(СтруктураПарсера,"WildCard",	_seq(_match("."),"Ws"));
+	ДобавитьПравило(СтруктураПарсера,"Alt",			_seq(_match("|"),"Ws"));
+	ДобавитьПравило(СтруктураПарсера,"Open",		_seq(_match("("),"Ws"));
+	ДобавитьПравило(СтруктураПарсера,"Close",		_seq(_match(")"),"Ws"));
+	ДобавитьПравило(СтруктураПарсера,"Comma",		_seq(_match(","),"Ws"));
+	ДобавитьПравило(СтруктураПарсера,"SComment",	_seq(_match("//"), _star(_seq(_not("EndOfLine"),any())), _star(_seq("EndOfLine",_not(any())))));
+	ДобавитьПравило(СтруктураПарсера,"EndOfLine",	_match_or_list(Символы.ПС+Символы.ВК));
+	ДобавитьПравило(СтруктураПарсера,"Ws",			_star(_choose(_match_or_list(" "+Символы.Таб),"EndOfLine","SComment")));
+	
+	Возврат ПрименитьПарсер(СтруктураПарсера,"Grammar",СтрокаОпределенияГрамматики);
+	
+КонецФункции
+}
+@para{Назначение этой функции по переданной грамматике разобрать строку и получить внутренее представление для дальнейшей обработки. Фактически самый сложный этап мы сделали. Осталось всего ничего - написать интерпретатор для обхода получившейся структуры.
+     }
 
-@para{Выражение - конкретное выражение разбора, возможно дополненное операцией выбора. Например так: }
-@BNF[(list @nonterm{Выражение}  @BNF-seq[@nonterm{ЧастьВыражения} @kleenestar[@BNF-group[@litchar{|} @nonterm{ЧастьВыражения}]]])]
-
-@para{===================================================}
-
-
-
-
-@BNF[(list @nonterm{digits} @kleeneplus[@nonterm{@optional[@BNF-seq[@litchar{0-9}]]}])
-     (list @nonterm{X} @BNF-seq[@nonterm{digits} @optional[@BNF-group[@litchar{.} @nonterm{digits}]]])
-     (list @nonterm{F} @BNF-alt[
-                                @BNF-seq[@litchar{(} @nonterm{S} @litchar{)}]
-                                 @nonterm{X}])
-     (list @nonterm{T} @BNF-alt[
-                                @BNF-seq[@nonterm{F} @BNF-alt[@litchar{*} @litchar{/}] @nonterm{T}]
-                                 @nonterm{F}]) 
-     (list @nonterm{S} @BNF-alt[
-                                @BNF-seq[@nonterm{T} @BNF-alt[@litchar{+} @litchar{-}] @nonterm{S}]
-                                 @nonterm{T}])]
+    
 
 
 @subsection{А что там под капотом?}
