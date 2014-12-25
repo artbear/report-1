@@ -296,7 +296,35 @@
 функции как объекты первого класса, замыкания и прочие вкусные плюшки, но пока потолок метапрограммирования - @1C{Выполнить()}/@1C{Вычислить()}. 
 	Меня, как разработчика,  это безмерно огорчает, но нет времени/денег/сил на разработку своего компилятора 1С. 
 	Так что буду ждать милости от разработчиков. Может наигравшись с "Такси" - обратят внимание на язык.}
-@para{GHj}
+@para{В первом приближении грамматика файла для генератора парсеров представляет из себя последовательность, возможно пустую, правил разбора. Записывается это так}
+
+@BNF[(list @nonterm{СписокПравил} @kleenestar[@nonterm{Правило}])]
+@para{Правило - это именованое определение. В приведеной выше грамматике разбора арифметичских выражений, примером правила может быть }
+@BNF[(list @nonterm{digits} @kleeneplus[@nonterm{@optional[@BNF-seq[@litchar{0-9}]]}])]
+@para{Здесь digits - имя правила, а выражение - все что идет поле значка "=". Таким образом появляется определение для нетерминала Правило }
+@BNF[(list @nonterm{Правило} @BNF-seq[@nonterm{Идентификатор} @litchar{=} @nonterm{Выражение}])]
+
+@para{Выражение - конкретное выражение разбора, возможно дополненное операцией выбора. Например так: }
+@BNF[(list @nonterm{Выражение}  @BNF-seq[@nonterm{ЧастьВыражения} @kleenestar[@BNF-group[@litchar{|} @nonterm{ЧастьВыражения}]]])]
+
+@para{===================================================}
+
+
+
+
+@BNF[(list @nonterm{digits} @kleeneplus[@nonterm{@optional[@BNF-seq[@litchar{0-9}]]}])
+     (list @nonterm{X} @BNF-seq[@nonterm{digits} @optional[@BNF-group[@litchar{.} @nonterm{digits}]]])
+     (list @nonterm{F} @BNF-alt[
+                                @BNF-seq[@litchar{(} @nonterm{S} @litchar{)}]
+                                 @nonterm{X}])
+     (list @nonterm{T} @BNF-alt[
+                                @BNF-seq[@nonterm{F} @BNF-alt[@litchar{*} @litchar{/}] @nonterm{T}]
+                                 @nonterm{F}]) 
+     (list @nonterm{S} @BNF-alt[
+                                @BNF-seq[@nonterm{T} @BNF-alt[@litchar{+} @litchar{-}] @nonterm{S}]
+                                 @nonterm{T}])]
+
+
 @subsection{А что там под капотом?}
 @subsection{Вкалывают роботы, а не человек!}
 
